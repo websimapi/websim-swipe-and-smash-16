@@ -12,6 +12,8 @@ export default class Replay {
         this.timelineUpdateInterval = null;
         this.isScrubbing = false;
         this.totalDuration = 0;
+        this.scrubRequest = null; // For throttling with requestAnimationFrame
+        this.wasPlaying = false;
 
         this.state = {
             isPlaying: false,
@@ -276,28 +278,44 @@ export default class Replay {
         document.addEventListener('pointermove', this.boundHandleScrubMove);
         document.addEventListener('pointerup', this.boundHandleScrubEnd, { once: true });
 
-        this.updateScrub(e);
+        this.updateScrub(e.clientX);
     }
 
     handleScrubMove(e) {
         if (!this.isScrubbing) return;
-        this.updateScrub(e);
+        
+        // Throttle updates using requestAnimationFrame
+        if (this.scrubRequest) {
+            cancelAnimationFrame(this.scrubRequest);
+        }
+        this.scrubRequest = requestAnimationFrame(() => {
+            this.updateScrub(e.clientX);
+            this.scrubRequest = null;
+        });
     }
 
     handleScrubEnd(e) {
+        if (this.scrubRequest) {
+            cancelAnimationFrame(this.scrubRequest);
+            this.scrubRequest = null;
+        }
+
         document.removeEventListener('pointermove', this.boundHandleScrubMove);
         this.isScrubbing = false;
 
-        // The state is already rebuilt on move, so we just need to decide whether to resume.
+        // Final update to the scrub position
+        this.updateScrub(e.clientX);
+
+        // Resume playback if it was playing before scrubbing
         if (this.wasPlaying) {
             this.resume();
         }
     }
 
-    updateScrub(e) {
+    updateScrub(clientX) {
         const timeline = document.getElementById('replay-timeline');
         const rect = timeline.getBoundingClientRect();
-        const progress = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const progress = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 
         const seekTime = progress * this.totalDuration;
 

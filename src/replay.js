@@ -215,17 +215,15 @@ export default class Replay {
         this.state.isPaused = false;
         this.state.startTime = performance.now() - this.state.pauseTime;
 
-        // This is the single point of truth for resuming BGM.
-        // It handles both regular resume and resume-after-scrub.
+        // Resume BGM at the correct position
         const bgmStartAction = this.state.actions.find(a => a.type === 'startBGM');
         if (bgmStartAction && this.replayBgmControl && this.replayBgmControl.resume) {
-            // Calculate the time offset from the BGM's own start time within the recording.
             const bgmOffset = this.state.pauseTime - bgmStartAction.timestamp;
             if (bgmOffset >= 0) {
-                 this.replayBgmControl.resume(bgmOffset);
+                this.replayBgmControl.resume(bgmOffset);
             }
         }
-
+        
         this.startTimelineUpdater();
         this.scheduleActions(this.state.currentReplayBoard, this.state.pauseTime);
 
@@ -310,20 +308,19 @@ export default class Replay {
         this.replayTimeouts.forEach(clearTimeout);
         this.replayTimeouts = [];
         this.stopTimelineUpdater();
-
-        // Stop the BGM, but don't try to reposition it here.
-        // The `resume` function will handle repositioning if playback continues.
+        
+        // Stop and clean up BGM completely
         if (this.replayBgmControl) {
             this.replayBgmControl.stop();
             this.replayBgmControl = null;
         }
-
+        
         const recording = recorder.getRecording();
         if (!recording || !recording.initialState) {
             console.error("Replay cannot be rebuilt: no recording found.");
             return;
         }
-
+        
         const replayBoardElement = document.getElementById('replay-board');
 
         // Always create a new board for a clean slate when scrubbing.
@@ -350,18 +347,6 @@ export default class Replay {
         replayBoard.initialize(recording.initialState);
 
         const pastActions = recording.actions.filter(a => a.timestamp < time);
-
-        // Find if BGM should be playing at this time and create it if needed.
-        // But do not play or seek it. Just have it ready.
-        const bgmAction = pastActions.find(a => a.type === 'startBGM');
-        if (bgmAction && !this.replayBgmControl) {
-            this.replayBgmControl = await playBackgroundMusic(true);
-            if (this.replayBgmControl.pause) {
-                // The BGM starts playing by default, so pause it immediately.
-                // It will be correctly positioned by resume() if the user hits play.
-                this.replayBgmControl.pause();
-            }
-        }
 
         for (const action of pastActions) {
              if (action.type === 'swap') {
@@ -391,7 +376,16 @@ export default class Replay {
                 await replayBoard.processMatches(false, null, true);
             }
         }
-
+        
+        // Recreate BGM at the correct position if needed
+        const bgmStartAction = recording.actions.find(a => a.type === 'startBGM');
+        if (bgmStartAction && bgmStartAction.timestamp < time) {
+            this.replayBgmControl = await playBackgroundMusic(true);
+            if (this.replayBgmControl && this.replayBgmControl.pause) {
+                this.replayBgmControl.pause();
+            }
+        }
+        
         this.state.pauseTime = time;
         this.state.isPaused = true;
         this.updateTimelineUI(time);

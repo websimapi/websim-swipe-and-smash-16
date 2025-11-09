@@ -305,7 +305,25 @@ export default class Replay {
         this.stopTimelineUpdater();
         
         const recording = recorder.getRecording();
-        if (!recording || !recording.initialState) return;
+        if (!recording || !recording.initialState) {
+            console.error("Replay cannot be rebuilt: no recording found.");
+            return;
+        }
+        
+        // Ensure a replay board exists and is set up. This is the main fix.
+        if (!this.state.currentReplayBoard) {
+            const replayBoardElement = document.getElementById('replay-board');
+            const newBoard = new Board(
+                this.config.boardSize, 
+                this.config.candyTypes, 
+                () => {}, // onMatch (muted for scrub)
+                () => {}, // getNewCandyType (will be replaced)
+                () => this.state.isPaused
+            );
+            newBoard.boardElement = replayBoardElement;
+            newBoard.setupBoard();
+            this.state.currentReplayBoard = newBoard;
+        }
 
         // On scrub start, a new board is needed.
         if (!this.isScrubbing) { // This check is flawed; should rebuild on first scrub action

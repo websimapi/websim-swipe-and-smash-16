@@ -310,85 +310,62 @@ export default class Replay {
             return;
         }
         
-        // Ensure a replay board exists and is set up. This is the main fix.
-        if (!this.state.currentReplayBoard) {
-            const replayBoardElement = document.getElementById('replay-board');
-            const newBoard = new Board(
-                this.config.boardSize, 
-                this.config.candyTypes, 
-                () => {}, // onMatch (muted for scrub)
-                () => {}, // getNewCandyType (will be replaced)
-                () => this.state.isPaused
-            );
-            newBoard.boardElement = replayBoardElement;
-            newBoard.setupBoard();
-            this.state.currentReplayBoard = newBoard;
-        }
+        const replayBoardElement = document.getElementById('replay-board');
 
-        // On scrub start, a new board is needed.
-        if (!this.isScrubbing) { // This check is flawed; should rebuild on first scrub action
-             // Let's remove this condition and always rebuild if scrubbing
-        }
-        
-        // The board might not exist if we scrub before playing. Let's ensure it does.
-        if (!this.state.currentReplayBoard) {
-            const replayBoardElement = document.getElementById('replay-board');
-            const replayBoard = new Board(this.config.boardSize, this.config.candyTypes, () => {}, () => {}, () => this.state.isPaused);
-            replayBoard.boardElement = replayBoardElement;
-            replayBoard.setupBoard();
-            this.state.currentReplayBoard = replayBoard;
-        }
-
+        // Always create a new board for a clean slate when scrubbing.
+        const replayBoard = new Board(
+            this.config.boardSize,
+            this.config.candyTypes,
+            () => {}, // onMatch (muted for scrub)
+            () => {}, // getNewCandyType (will be replaced by queue)
+            () => true // The board is effectively always paused during scrubbing
+        );
+        replayBoard.boardElement = replayBoardElement;
+        this.state.currentReplayBoard = replayBoard;
 
         // Re-create the candy queue for the replay generator.
         const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
-        this.state.currentReplayBoard.getNewCandyType = () => {
+        replayBoard.getNewCandyType = () => {
             const nextType = candyQueue.shift();
             return nextType || this.config.candyTypes[0];
         };
 
-        // Temporarily mute sounds during fast-forward
-        const originalOnMatch = this.state.currentReplayBoard.onMatch;
-        this.state.currentReplayBoard.onMatch = () => {};
-
         // Re-initialize the board state. This needs to clear existing DOM elements.
-        this.state.currentReplayBoard.boardElement.innerHTML = '';
-        this.state.currentReplayBoard.initialize(recording.initialState);
+        replayBoard.boardElement.innerHTML = '';
+        replayBoard.setupBoard();
+        replayBoard.initialize(recording.initialState);
 
         const pastActions = recording.actions.filter(a => a.timestamp < time);
 
         for (const action of pastActions) {
              if (action.type === 'swap') {
-                const candy1 = this.state.currentReplayBoard.grid[action.from.r][action.from.c];
-                const candy2 = this.state.currentReplayBoard.grid[action.to.r][action.to.c];
+                const candy1 = replayBoard.grid[action.from.r][action.from.c];
+                const candy2 = replayBoard.grid[action.to.r][action.to.c];
                 if(candy1 && candy2) {
-                    await this.state.currentReplayBoard.swapCandies(candy1, candy2, true);
-                    const isValid = await this.state.currentReplayBoard.processMatches(false, [candy1, candy2], true);
+                    await replayBoard.swapCandies(candy1, candy2, true);
+                    const isValid = await replayBoard.processMatches(false, [candy1, candy2], true);
                     if(!isValid) {
-                         await this.state.currentReplayBoard.swapCandies(candy1, candy2, true);
+                         await replayBoard.swapCandies(candy1, candy2, true);
                     }
                 }
             } else if (action.type === 'activateRainbow') {
-                const rainbowCandy = this.state.currentReplayBoard.grid[action.rainbowCandy.r][action.rainbowCandy.c];
-                const otherCandy = this.state.currentReplayBoard.grid[action.otherCandy.r][action.otherCandy.c];
+                const rainbowCandy = replayBoard.grid[action.rainbowCandy.r][action.rainbowCandy.c];
+                const otherCandy = replayBoard.grid[action.otherCandy.r][action.otherCandy.c];
                 if (rainbowCandy && otherCandy) {
-                    await this.state.currentReplayBoard.activateRainbowPowerup(rainbowCandy, otherCandy, true);
+                    await replayBoard.activateRainbowPowerup(rainbowCandy, otherCandy, true);
                 }
             } else if (action.type === 'smash') {
                 const candiesToSmash = action.smashed
-                    .map(coords => (this.state.currentReplayBoard.grid[coords.r] ? this.state.currentReplayBoard.grid[coords.r][coords.c] : null))
+                    .map(coords => (replayBoard.grid[coords.r] ? replayBoard.grid[coords.r][coords.c] : null))
                     .filter(Boolean);
                 if (candiesToSmash.length > 0) {
-                    await this.state.currentReplayBoard.smashCandies(candiesToSmash, true);
+                    await replayBoard.smashCandies(candiesToSmash, true);
                 }
             } else if (action.type === 'initialCascade') {
-                await this.state.currentReplayBoard.processMatches(false, null, true);
+                await replayBoard.processMatches(false, null, true);
             }
         }
         
-        // Restore sound function
-        this.state.currentReplayBoard.onMatch = originalOnMatch;
-
         this.state.pauseTime = time;
         this.state.isPaused = true;
         this.updateTimelineUI(time);

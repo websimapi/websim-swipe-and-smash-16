@@ -159,7 +159,8 @@ export default class Replay {
                         await replayBoard.smashCandies(candiesToSmash);
                     }
                 } else if (action.type === 'initialCascade') {
-                    await replayBoard.processMatches(false, null);
+                    // Process initial matches with full animations
+                    await replayBoard.processMatches(false, null, false);
                 } else if (action.type === 'sound') {
                     playSound(action.name);
                 } else if (action.type === 'startRainbow') {

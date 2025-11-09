@@ -224,7 +224,11 @@ export default class Board {
             
             allCandiesToClear.forEach(candy => {
                 candy.classList.add('matched');
-                this.grid[parseInt(candy.dataset.row)][parseInt(candy.dataset.col)] = null;
+                const r = parseInt(candy.dataset.row);
+                const c = parseInt(candy.dataset.col);
+                if (this.grid[r] && this.grid[r][c] === candy) {
+                    this.grid[r][c] = null;
+                }
             });
         }
         
@@ -235,10 +239,8 @@ export default class Board {
         await this.dropCandies(instant);
         await this.fillBoard(false, instant);
         
-        // This should return the result of the recursive call, but to avoid infinite loops
-        // on a board that can't clear, and for simplicity, we'll consider the first match a success.
         // Recursive call to handle cascades.
-        await this.processMatches(isInitializing, null, instant);
+        const hadCascade = await this.processMatches(isInitializing, null, instant);
         
         return true;
     }

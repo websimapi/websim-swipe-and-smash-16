@@ -336,7 +336,7 @@ export default class Replay {
                 const nextType = candyQueue.shift();
                 return nextType || this.config.candyTypes[0];
             },
-            () => true // The board is effectively always paused during scrubbing
+            () => false // Don't pause during rebuild - we need animations to complete instantly
         );
         replayBoard.boardElement = replayBoardElement;
         this.state.currentReplayBoard = replayBoard;
@@ -350,7 +350,7 @@ export default class Replay {
         replayBoard.setupBoard();
         replayBoard.initialize(recording.initialState);
 
-        const pastActions = recording.actions.filter(a => a.timestamp < time);
+        const pastActions = recording.actions.filter(a => a.timestamp <= time);
 
         // Process all past actions with instant flag to skip animations
         for (const action of pastActions) {
@@ -384,7 +384,7 @@ export default class Replay {
         
         // Recreate BGM at the correct position if needed
         const bgmStartAction = recording.actions.find(a => a.type === 'startBGM');
-        if (bgmStartAction && bgmStartAction.timestamp < time) {
+        if (bgmStartAction && bgmStartAction.timestamp <= time) {
             this.replayBgmControl = await playBackgroundMusic(true);
             if (this.replayBgmControl && this.replayBgmControl.pause) {
                 this.replayBgmControl.pause();

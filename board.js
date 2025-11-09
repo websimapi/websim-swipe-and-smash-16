@@ -190,10 +190,10 @@ export default class Board {
                 allCandiesToClear.delete(candyToUpgrade);
                 candyToUpgrade.dataset.powerup = p.type;
                 candyToUpgrade.classList.add(`powerup-${p.type}`);
-                 if (p.type === 'rainbow') {
-                    candyToUpgrade.dataset.type = 'candy_chocolate.png';
-                    candyToUpgrade.style.backgroundImage = `url(candy_chocolate.png)`;
-                }
+             if (p.type === 'rainbow') {
+                candyToUpgrade.dataset.type = 'candy_chocolate.png';
+                candyToUpgrade.style.backgroundImage = `url(candy_chocolate.png)`;
+            }
             }
         });
 

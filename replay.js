@@ -304,6 +304,12 @@ export default class Replay {
         this.replayTimeouts = [];
         this.stopTimelineUpdater();
         
+        // Stop and clean up BGM completely
+        if (this.replayBgmControl) {
+            this.replayBgmControl.stop();
+            this.replayBgmControl = null;
+        }
+        
         const recording = recorder.getRecording();
         if (!recording || !recording.initialState) {
             console.error("Replay cannot be rebuilt: no recording found.");
@@ -311,58 +317,99 @@ export default class Replay {
         }
         
         const replayBoardElement = document.getElementById('replay-board');
+        replayBoardElement.innerHTML = ''; // Clear all existing candies
 
+        // Re-create the candy queue for the replay generator.
+        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
+        
         // Always create a new board for a clean slate when scrubbing.
         const replayBoard = new Board(
             this.config.boardSize,
             this.config.candyTypes,
             () => {}, // onMatch (muted for scrub)
-            () => {}, // getNewCandyType (will be replaced by queue)
+            () => {
+                const nextType = candyQueue.shift();
+                return nextType || this.config.candyTypes[0];
+            },
             () => true // The board is effectively always paused during scrubbing
         );
         replayBoard.boardElement = replayBoardElement;
         this.state.currentReplayBoard = replayBoard;
 
-        // Re-create the candy queue for the replay generator.
-        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
-        replayBoard.getNewCandyType = () => {
-            const nextType = candyQueue.shift();
-            return nextType || this.config.candyTypes[0];
+        // Override board methods to ensure instant positioning and replay tagging
+        const originalCreateCandy = replayBoard.createCandy.bind(replayBoard);
+        replayBoard.createCandy = function(row, col, type, isInitializing = false) {
+            const candy = originalCreateCandy(row, col, type, isInitializing, true);
+            // Force immediate positioning for scrubbing
+            const candySize = this.boardElement.clientWidth / this.size;
+            candy.style.top = `${row * candySize}px`;
+            candy.style.left = `${col * candySize}px`;
+            candy.style.transition = 'none';
+            return candy;
         };
 
-        // Re-initialize the board state. This needs to clear existing DOM elements.
-        replayBoard.boardElement.innerHTML = '';
         replayBoard.setupBoard();
         replayBoard.initialize(recording.initialState);
 
+        // Force a reflow to ensure all candies are positioned
+        replayBoardElement.offsetHeight;
+
         const pastActions = recording.actions.filter(a => a.timestamp < time);
 
+        // Process all past actions instantly to rebuild the correct state
         for (const action of pastActions) {
-             if (action.type === 'swap') {
-                const candy1 = replayBoard.grid[action.from.r][action.from.c];
-                const candy2 = replayBoard.grid[action.to.r][action.to.c];
+            if (action.type === 'swap') {
+                const candy1 = replayBoard.grid[action.from.r]?.[action.from.c];
+                const candy2 = replayBoard.grid[action.to.r]?.[action.to.c];
                 if(candy1 && candy2) {
                     await replayBoard.swapCandies(candy1, candy2, true);
                     const isValid = await replayBoard.processMatches(false, [candy1, candy2], true);
                     if(!isValid) {
-                         await replayBoard.swapCandies(candy1, candy2, true);
+                        await replayBoard.swapCandies(candy1, candy2, true);
                     }
                 }
             } else if (action.type === 'activateRainbow') {
-                const rainbowCandy = replayBoard.grid[action.rainbowCandy.r][action.rainbowCandy.c];
-                const otherCandy = replayBoard.grid[action.otherCandy.r][action.otherCandy.c];
+                const rainbowCandy = replayBoard.grid[action.rainbowCandy.r]?.[action.rainbowCandy.c];
+                const otherCandy = replayBoard.grid[action.otherCandy.r]?.[action.otherCandy.c];
                 if (rainbowCandy && otherCandy) {
                     await replayBoard.activateRainbowPowerup(rainbowCandy, otherCandy, true);
                 }
             } else if (action.type === 'smash') {
                 const candiesToSmash = action.smashed
-                    .map(coords => (replayBoard.grid[coords.r] ? replayBoard.grid[coords.r][coords.c] : null))
+                    .map(coords => replayBoard.grid[coords.r]?.[coords.c])
                     .filter(Boolean);
                 if (candiesToSmash.length > 0) {
                     await replayBoard.smashCandies(candiesToSmash, true);
                 }
             } else if (action.type === 'initialCascade') {
                 await replayBoard.processMatches(false, null, true);
+            }
+        }
+        
+        // Final pass to ensure all candies are correctly positioned
+        for (let r = 0; r < replayBoard.size; r++) {
+            for (let c = 0; c < replayBoard.size; c++) {
+                const candy = replayBoard.grid[r][c];
+                if (candy) {
+                    const candySize = replayBoardElement.clientWidth / replayBoard.size;
+                    candy.style.top = `${r * candySize}px`;
+                    candy.style.left = `${c * candySize}px`;
+                    candy.style.transition = 'none';
+                    candy.dataset.row = r;
+                    candy.dataset.col = c;
+                }
+            }
+        }
+        
+        // Force another reflow to ensure positions are applied
+        replayBoardElement.offsetHeight;
+        
+        // Recreate BGM at the correct position if needed
+        const bgmStartAction = recording.actions.find(a => a.type === 'startBGM');
+        if (bgmStartAction && bgmStartAction.timestamp < time) {
+            this.replayBgmControl = await playBackgroundMusic(true);
+            if (this.replayBgmControl && this.replayBgmControl.pause) {
+                this.replayBgmControl.pause();
             }
         }
         

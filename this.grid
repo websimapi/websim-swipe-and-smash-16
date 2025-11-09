@@ -1,0 +1,43 @@
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        candiesToRemove.forEach(candy => candy.remove());
+        
+        await this.dropCandies();
+        await this.fillBoard();
+        
+        await this.processMatches(isInitializing, null);
+    }
+
+    return true;
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    candiesToSmash.forEach(candy => candy.remove());
+    
+    await this.dropCandies();
+    await this.fillBoard();
+    
+    await this.processMatches(false, null);
+}
+
+async activateRainbowPowerup(rainbowCandy, otherCandy) {
+    const targetType = otherCandy.dataset.type;
+    const candiesToRemove = new Set();
+    candiesToRemove.add(rainbowCandy);
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        candiesToRemove.forEach(candy => candy.remove());
+        
+        await this.dropCandies();
+        await this.fillBoard();
+        
+        await this.processMatches(false, null);
+    }
+}
+
+async dropCandies() {
+    for (let c = 0; c < this.size; c++) {
+        let emptyRow = this.size - 1;
+        for (let r = this.size - 1; r >= 0; r--) {
+

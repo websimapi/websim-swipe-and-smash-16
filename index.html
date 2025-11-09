@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Swipe and Smash</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "confetti": "https://esm.sh/canvas-confetti@1.9.2"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Swipe and Smash</h1>
+        <p class="subtitle">Candy Mash</p>
+        <div class="info">
+            <div id="score-container">Score: <span id="score">0</span></div>
+        </div>
+        <div id="game-board-container">
+            <div id="combo-display"></div>
+            <div id="game-board"></div>
+            <div id="start-overlay">
+                <button id="start-button">Start</button>
+            </div>
+        </div>
+        <div id="game-footer">
+            <div id="timer-container">Time: <span id="timer">15</span></div>
+            <div id="score-container">Score: <span id="score">0</span></div>
+            <div id="clip-button-container">
+                <button id="clip-button" aria-label="Show Replay"></button>
+            </div>
+            <div id="smash-container">
+                <div id="smash-button">
+                    <div id="smash-fluid"></div>
+                    <span id="smash-value">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="replay-modal" class="hidden">
+        <div id="replay-container">
+            <div id="replay-board"></div>
+            <div id="replay-controls">
+                <button id="play-pause-button">&#9658;</button> <!-- Play Icon -->
+                <div id="replay-timeline">
+                    <div id="replay-progress"></div>
+                </div>
+            </div>
+            <button id="close-replay-button">&times;</button>
+        </div>
+    </div>
+    <script type="module" src="game.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,412 @@
+body {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0c4e4;
+    margin: 0;
+    overflow: hidden;
+    touch-action: none;
+}
+
+#game-container {
+    text-align: center;
+    background: #ffebf8;
+    padding: 10px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    border: 5px solid #fff;
+    width: 95vw;
+    max-width: 540px;
+    box-sizing: border-box;
+}
+
+h1 {
+    display: none;
+}
+
+.subtitle {
+    display: none;
+}
+
+.info {
+    display: none;
+}
+
+#game-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    margin-bottom: 10px;
+    color: #5c3c54;
+    font-size: 1.2em;
+}
+
+#clip-button-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+}
+
+#clip-button {
+    width: 40px;
+    height: 40px;
+    background-image: url('clip_icon.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+#score-container {
+    color: #5c3c54;
+    font-size: 1em; /* Adjusted to fit the bar */
+}
+
+#smash-container {
+    text-align: center;
+}
+
+#smash-button {
+    width: 50px;
+    height: 50px;
+    background-color: #f0c4e4;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.5em;
+    font-weight: bold;
+    border: 3px solid white;
+    box-shadow: 0 4px 0 #a62867, 0 5px 10px rgba(0,0,0,0.2);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+}
+
+#smash-value {
+    position: relative;
+    z-index: 2;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+#smash-fluid {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background-color: #d63384;
+    z-index: 1;
+    transition: height 0.5s ease-out;
+}
+
+#game-board-container {
+    position: relative;
+    transition: filter 0.5s ease;
+}
+
+#game-board-container.rainbow-mode {
+    animation: rainbow-cycle 5s linear infinite;
+}
+
+@keyframes rainbow-cycle {
+    0%   { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+#combo-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    color: white;
+    font-size: 4em;
+    font-weight: bold;
+    z-index: 100;
+    text-shadow: 3px 3px 0 #d63384, -1px -1px 0 #d63384, 1px -1px 0 #d63384, -1px 1px 0 #d63384, 1px 1px 0 #d63384;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out, top 0.3s ease, left 0.3s ease, font-size 0.3s ease;
+}
+
+#combo-display.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+#combo-display.rainbow {
+    top: 10px;
+    left: 10px;
+    font-size: 2em;
+    transform: translate(0, 0) scale(1);
+    text-shadow: 2px 2px 0 #d63384, -1px -1px 0 #d63384, 1px -1px 0 #d63384, -1px 1px 0 #d63384, 1px 1px 0 #d63384;
+}
+
+#start-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 235, 248, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 150;
+    border-radius: 10px;
+    transition: opacity 0.3s ease-out;
+}
+
+#start-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#start-button {
+    padding: 20px 40px;
+    font-size: 2em;
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+    background-color: #d63384;
+    color: white;
+    border: 3px solid white;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    transition: transform 0.1s ease;
+}
+
+#start-button:active {
+    transform: scale(0.95);
+}
+
+#game-board {
+    display: grid;
+    border: 5px solid #e7a5d3;
+    background-color: rgba(255, 255, 255, 0.5);
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+}
+
+.candy {
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    position: absolute;
+    transition: top 0.3s ease, left 0.3s ease, transform 0.2s ease, opacity 0.3s ease;
+    will-change: top, left, transform; /* Performance hint for browsers */
+}
+
+.candy.selected {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 5px yellow);
+}
+
+.candy.matched {
+    transform: scale(0);
+    opacity: 0;
+}
+
+.candy.powerup-rainbow {
+    animation: rainbow-glow 2s infinite;
+}
+
+@keyframes rainbow-glow {
+    0% { filter: drop-shadow(0 0 3px #ff0000); }
+    15% { filter: drop-shadow(0 0 3px #ff7f00); }
+    30% { filter: drop-shadow(0 0 3px #ffff00); }
+    45% { filter: drop-shadow(0 0 3px #00ff00); }
+    60% { filter: drop-shadow(0 0 3px #0000ff); }
+    75% { filter: drop-shadow(0 0 3px #4b0082); }
+    90% { filter: drop-shadow(0 0 3px #ee82ee); }
+    100% { filter: drop-shadow(0 0 3px #ff0000); }
+}
+
+.candy.powerup-bomb::before {
+    content: '💥';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em;
+    opacity: 0.7;
+    text-shadow: 0 0 3px white;
+}
+
+.candy.powerup-row::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    right: 10%;
+    height: 10%;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 5px;
+    transform: translateY(-50%);
+    box-shadow: 0 0 4px white;
+}
+
+.candy.powerup-col::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 10%;
+    bottom: 10%;
+    width: 10%;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 5px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 4px white;
+}
+
+/* Replay Modal Styles */
+#replay-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+#replay-modal.hidden {
+    display: none;
+}
+
+#replay-container {
+    position: relative;
+    width: 95vw;
+    max-width: 540px;
+    box-sizing: border-box;
+    background: #ffebf8;
+    padding: 10px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    border: 5px solid #fff;
+    transition: filter 0.5s ease;
+}
+
+#replay-container.rainbow-mode {
+    animation: rainbow-cycle 5s linear infinite;
+}
+
+#replay-board {
+    display: grid;
+    border: 5px solid #e7a5d3;
+    background-color: rgba(255, 255, 255, 0.5);
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 15px; /* Space for the timeline */
+}
+
+#replay-controls {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    z-index: 250;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
+
+#play-pause-button {
+    width: 50px; /* Smaller button */
+    height: 50px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 3px solid white;
+    border-radius: 50%;
+    color: white;
+    font-size: 24px; /* Adjusted font size */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 1; /* Always visible */
+    transition: opacity 0.3s;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    margin-right: 15px;
+}
+
+#replay-container:hover #play-pause-button {
+    /* opacity: 1; */ /* This rule is removed to favor JS control */
+}
+
+#play-pause-button.visible {
+    opacity: 1;
+}
+
+#replay-timeline {
+    flex-grow: 1;
+    height: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    touch-action: none; /* For better mobile dragging */
+}
+
+#replay-progress {
+    width: 0%;
+    height: 100%;
+    background-color: #d63384;
+    border-radius: 5px;
+    position: relative;
+}
+
+#replay-progress::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border: 2px solid #d63384;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+#close-replay-button {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 40px;
+    height: 40px;
+    background: #d63384;
+    color: white;
+    border: 3px solid white;
+    border-radius: 50%;
+    font-size: 2em;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    padding-bottom: 4px; /*- Vertical alignment adjust */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}

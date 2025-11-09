@@ -1,0 +1,5 @@
+async smashCandies(candiesToSmash) {
+    if (candiesToSmash.length === 0) return;
+    
+    // This is a smash, not a player-made match, so isPlayerMove is false.
+

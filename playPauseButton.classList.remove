@@ -1,0 +1,20 @@
+resume() {
+    if (!this.state.isPaused) return;
+
+    this.state.isPaused = false;
+    this.state.startTime = performance.now() - this.state.pauseTime;
+
+    if (this.replayBgmControl && this.replayBgmControl.resume) {
+        this.replayBgmControl.resume();
+    }
+
+    this.rebuildAndSchedule(this.state.pauseTime);
+
+    const playPauseButton = document.getElementById('play-pause-button');
+    playPauseButton.innerHTML = '&#10074;&#10074;'; // Pause icon
+    playPauseButton.classList.remove('playing');
+}
+
+stop() {
+    this.replayTimeouts.forEach(clearTimeout);
+

@@ -368,13 +368,34 @@ export default class Board {
                         this.grid[emptyRow][c].dataset.row = emptyRow;
                         
                         const candySize = this.boardElement.clientWidth / this.size;
-                        this.grid[emptyRow][c].style.top = `${emptyRow * candySize}px`;
+                        if (instant) {
+                            // Force immediate position update without transition
+                            this.grid[emptyRow][c].style.transition = 'none';
+                            this.grid[emptyRow][c].style.top = `${emptyRow * candySize}px`;
+                            // Force reflow to ensure transition is disabled
+                            void this.grid[emptyRow][c].offsetHeight;
+                        } else {
+                            this.grid[emptyRow][c].style.top = `${emptyRow * candySize}px`;
+                        }
                     }
                     emptyRow--;
                 }
             }
         }
-        return instant ? Promise.resolve() : this.pausableTimeout(300);
+        
+        if (instant) {
+            // Re-enable transitions after instant drop
+            for (let r = 0; r < this.size; r++) {
+                for (let c = 0; c < this.size; c++) {
+                    if (this.grid[r][c]) {
+                        this.grid[r][c].style.transition = '';
+                    }
+                }
+            }
+            return Promise.resolve();
+        }
+        
+        return this.pausableTimeout(300);
     }
     
     async fillBoard(isReplay = false, instant = false) {
@@ -384,10 +405,16 @@ export default class Board {
                 if (!this.grid[r][c]) {
                     const candy = this.createCandy(r, c, undefined, false, isReplay);
                     this.grid[r][c] = candy;
-                    // Animate the drop
+                    
                     if (instant) {
-                         candy.style.top = `${r * candySize}px`;
+                        // Instantly place candy at final position
+                        candy.style.transition = 'none';
+                        candy.style.top = `${r * candySize}px`;
+                        // Force reflow
+                        void candy.offsetHeight;
+                        candy.style.transition = '';
                     } else {
+                        // Animate the drop
                         await new Promise(resolve => requestAnimationFrame(() => {
                             candy.style.top = `${r * candySize}px`;
                             resolve();

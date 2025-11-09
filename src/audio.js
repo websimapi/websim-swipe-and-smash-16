@@ -126,23 +126,23 @@ export async function playBackgroundMusic(isReplay = false) {
                 pausedAt = audioContext.currentTime - startedAt;
                 sourceNode.stop();
             },
-            resume: (resumeTime) => {
+            resume: (resumeTime) => { // resumeTime is in milliseconds
                 if (!isPaused || !sourceNode) return;
                 isPaused = false;
 
                 // If a specific time is provided, use it. Otherwise, use the time where it was paused.
-                const newPausedAt = (typeof resumeTime === 'number') ? resumeTime / 1000 : pausedAt;
+                const seekSeconds = (typeof resumeTime === 'number') ? resumeTime / 1000 : pausedAt;
 
                 // Create a new source node to resume playback.
                 const newSourceNode = audioContext.createBufferSource();
                 newSourceNode.buffer = sourceNode.buffer;
                 newSourceNode.loop = sourceNode.loop;
                 newSourceNode.connect(gainNode);
-                newSourceNode.start(0, newPausedAt % newSourceNode.buffer.duration);
+                newSourceNode.start(0, seekSeconds % newSourceNode.buffer.duration);
 
                 // update references
                 sourceNode = newSourceNode;
-                startedAt = audioContext.currentTime - newPausedAt;
+                startedAt = audioContext.currentTime - seekSeconds;
             }
         };
     } else {

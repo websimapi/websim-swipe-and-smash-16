@@ -317,7 +317,11 @@ export default class Replay {
         }
         
         const replayBoardElement = document.getElementById('replay-board');
-        replayBoardElement.innerHTML = ''; // Clear all existing candies
+        
+        // Completely clear the board - remove all candy elements
+        while (replayBoardElement.firstChild) {
+            replayBoardElement.removeChild(replayBoardElement.firstChild);
+        }
 
         // Re-create the candy queue for the replay generator.
         const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
@@ -336,27 +340,18 @@ export default class Replay {
         replayBoard.boardElement = replayBoardElement;
         this.state.currentReplayBoard = replayBoard;
 
-        // Override board methods to ensure instant positioning and replay tagging
+        // Tag candies as replay candies
         const originalCreateCandy = replayBoard.createCandy.bind(replayBoard);
         replayBoard.createCandy = function(row, col, type, isInitializing = false) {
-            const candy = originalCreateCandy(row, col, type, isInitializing, true);
-            // Force immediate positioning for scrubbing
-            const candySize = this.boardElement.clientWidth / this.size;
-            candy.style.top = `${row * candySize}px`;
-            candy.style.left = `${col * candySize}px`;
-            candy.style.transition = 'none';
-            return candy;
+            return originalCreateCandy(row, col, type, isInitializing, true);
         };
 
         replayBoard.setupBoard();
         replayBoard.initialize(recording.initialState);
 
-        // Force a reflow to ensure all candies are positioned
-        replayBoardElement.offsetHeight;
-
         const pastActions = recording.actions.filter(a => a.timestamp < time);
 
-        // Process all past actions instantly to rebuild the correct state
+        // Process all past actions with instant flag to skip animations
         for (const action of pastActions) {
             if (action.type === 'swap') {
                 const candy1 = replayBoard.grid[action.from.r]?.[action.from.c];
@@ -385,24 +380,6 @@ export default class Replay {
                 await replayBoard.processMatches(false, null, true);
             }
         }
-        
-        // Final pass to ensure all candies are correctly positioned
-        for (let r = 0; r < replayBoard.size; r++) {
-            for (let c = 0; c < replayBoard.size; c++) {
-                const candy = replayBoard.grid[r][c];
-                if (candy) {
-                    const candySize = replayBoardElement.clientWidth / replayBoard.size;
-                    candy.style.top = `${r * candySize}px`;
-                    candy.style.left = `${c * candySize}px`;
-                    candy.style.transition = 'none';
-                    candy.dataset.row = r;
-                    candy.dataset.col = c;
-                }
-            }
-        }
-        
-        // Force another reflow to ensure positions are applied
-        replayBoardElement.offsetHeight;
         
         // Recreate BGM at the correct position if needed
         const bgmStartAction = recording.actions.find(a => a.type === 'startBGM');

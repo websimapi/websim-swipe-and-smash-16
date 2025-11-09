@@ -322,52 +322,61 @@ export default class Replay {
         }
         
         const replayBoardElement = document.getElementById('replay-board');
+        
+        // Completely clear the board - remove all candy elements
+        while (replayBoardElement.firstChild) {
+            replayBoardElement.removeChild(replayBoardElement.firstChild);
+        }
 
+        // Re-create the candy queue for the replay generator.
+        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
+        
         // Always create a new board for a clean slate when scrubbing.
         const replayBoard = new Board(
             this.config.boardSize,
             this.config.candyTypes,
             () => {}, // onMatch (muted for scrub)
-            () => {}, // getNewCandyType (will be replaced by queue)
+            () => {
+                const nextType = candyQueue.shift();
+                return nextType || this.config.candyTypes[0];
+            },
             () => true // The board is effectively always paused during scrubbing
         );
         replayBoard.boardElement = replayBoardElement;
         this.state.currentReplayBoard = replayBoard;
 
-        // Re-create the candy queue for the replay generator.
-        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
-        replayBoard.getNewCandyType = () => {
-            const nextType = candyQueue.shift();
-            return nextType || this.config.candyTypes[0];
+        // Tag candies as replay candies
+        const originalCreateCandy = replayBoard.createCandy.bind(replayBoard);
+        replayBoard.createCandy = function(row, col, type, isInitializing = false) {
+            return originalCreateCandy(row, col, type, isInitializing, true);
         };
 
-        // Re-initialize the board state. This needs to clear existing DOM elements.
-        replayBoard.boardElement.innerHTML = '';
         replayBoard.setupBoard();
         replayBoard.initialize(recording.initialState);
 
         const pastActions = recording.actions.filter(a => a.timestamp < time);
 
+        // Process all past actions with instant flag to skip animations
         for (const action of pastActions) {
-             if (action.type === 'swap') {
-                const candy1 = replayBoard.grid[action.from.r][action.from.c];
-                const candy2 = replayBoard.grid[action.to.r][action.to.c];
+            if (action.type === 'swap') {
+                const candy1 = replayBoard.grid[action.from.r]?.[action.from.c];
+                const candy2 = replayBoard.grid[action.to.r]?.[action.to.c];
                 if(candy1 && candy2) {
                     await replayBoard.swapCandies(candy1, candy2, true);
                     const isValid = await replayBoard.processMatches(false, [candy1, candy2], true);
                     if(!isValid) {
-                         await replayBoard.swapCandies(candy1, candy2, true);
+                        await replayBoard.swapCandies(candy1, candy2, true);
                     }
                 }
             } else if (action.type === 'activateRainbow') {
-                const rainbowCandy = replayBoard.grid[action.rainbowCandy.r][action.rainbowCandy.c];
-                const otherCandy = replayBoard.grid[action.otherCandy.r][action.otherCandy.c];
+                const rainbowCandy = replayBoard.grid[action.rainbowCandy.r]?.[action.rainbowCandy.c];
+                const otherCandy = replayBoard.grid[action.otherCandy.r]?.[action.otherCandy.c];
                 if (rainbowCandy && otherCandy) {
                     await replayBoard.activateRainbowPowerup(rainbowCandy, otherCandy, true);
                 }
             } else if (action.type === 'smash') {
                 const candiesToSmash = action.smashed
-                    .map(coords => (replayBoard.grid[coords.r] ? replayBoard.grid[coords.r][coords.c] : null))
+                    .map(coords => replayBoard.grid[coords.r]?.[coords.c])
                     .filter(Boolean);
                 if (candiesToSmash.length > 0) {
                     await replayBoard.smashCandies(candiesToSmash, true);

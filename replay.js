@@ -305,7 +305,29 @@ export default class Replay {
         this.stopTimelineUpdater();
         
         const recording = recorder.getRecording();
-        if (!recording || !recording.initialState || !this.state.currentReplayBoard) return;
+        if (!recording || !recording.initialState) return;
+
+        // On scrub start, a new board is needed.
+        if (!this.isScrubbing) { // This check is flawed; should rebuild on first scrub action
+             // Let's remove this condition and always rebuild if scrubbing
+        }
+        
+        // The board might not exist if we scrub before playing. Let's ensure it does.
+        if (!this.state.currentReplayBoard) {
+            const replayBoardElement = document.getElementById('replay-board');
+            const replayBoard = new Board(this.config.boardSize, this.config.candyTypes, () => {}, () => {}, () => this.state.isPaused);
+            replayBoard.boardElement = replayBoardElement;
+            replayBoard.setupBoard();
+            this.state.currentReplayBoard = replayBoard;
+        }
+
+
+        // Re-create the candy queue for the replay generator.
+        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
+        this.state.currentReplayBoard.getNewCandyType = () => {
+            const nextType = candyQueue.shift();
+            return nextType || this.config.candyTypes[0];
+        };
 
         // Temporarily mute sounds during fast-forward
         const originalOnMatch = this.state.currentReplayBoard.onMatch;

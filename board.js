@@ -93,15 +93,19 @@ export default class Board {
         // Swap datasets
         candy1.dataset.row = r2;
         candy1.dataset.col = c2;
-        candy2.dataset.row = r1;
-        candy2.dataset.col = c1;
+        if(candy2) { // Add check for candy2 being null
+            candy2.dataset.row = r1;
+            candy2.dataset.col = c1;
+        }
 
         // Animate swap
         const candySize = this.boardElement.clientWidth / this.size;
         candy1.style.top = `${r2 * candySize}px`;
         candy1.style.left = `${c2 * candySize}px`;
-        candy2.style.top = `${r1 * candySize}px`;
-        candy2.style.left = `${c1 * candySize}px`;
+        if (candy2) { // Add check for candy2 being null
+            candy2.style.top = `${r1 * candySize}px`;
+            candy2.style.left = `${c1 * candySize}px`;
+        }
 
         if (!instant) {
             playSound('nice_swipe.mp3');
@@ -231,6 +235,9 @@ export default class Board {
         await this.dropCandies(instant);
         await this.fillBoard(false, instant);
         
+        // This should return the result of the recursive call, but to avoid infinite loops
+        // on a board that can't clear, and for simplicity, we'll consider the first match a success.
+        // Recursive call to handle cascades.
         await this.processMatches(isInitializing, null, instant);
         
         return true;

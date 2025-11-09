@@ -12,6 +12,8 @@ export default class Replay {
         this.timelineUpdateInterval = null;
         this.isScrubbing = false;
         this.totalDuration = 0;
+        this.scrubRequest = null; // For throttling with requestAnimationFrame
+        this.wasPlaying = false;
 
         this.state = {
             isPlaying: false,
@@ -277,12 +279,26 @@ export default class Replay {
 
     handleScrubMove(e) {
         if (!this.isScrubbing) return;
-        this.updateScrub(e);
+        // Throttle updates using requestAnimationFrame to prevent crashes
+        if (this.scrubRequest) {
+            cancelAnimationFrame(this.scrubRequest);
+        }
+        this.scrubRequest = requestAnimationFrame(() => {
+            this.updateScrub(e);
+            this.scrubRequest = null;
+        });
     }
 
     handleScrubEnd(e) {
+        if (this.scrubRequest) {
+            cancelAnimationFrame(this.scrubRequest);
+            this.scrubRequest = null;
+        }
         document.removeEventListener('pointermove', this.boundHandleScrubMove);
         this.isScrubbing = false;
+
+        // Final update to ensure it lands on the right spot
+        this.updateScrub(e);
 
         // The state is already rebuilt on move, so we just need to decide whether to resume.
         if (this.wasPlaying) {
@@ -321,28 +337,26 @@ export default class Replay {
         const replayBoardElement = document.getElementById('replay-board');
         
         // Completely clear the board - remove all candy elements
-        const allCandies = replayBoardElement.querySelectorAll('.candy');
-        allCandies.forEach(candy => candy.remove());
+        while (replayBoardElement.firstChild) {
+            replayBoardElement.removeChild(replayBoardElement.firstChild);
+        }
 
-        // Re-create the candy queue - we need to replay ALL newCandy actions up to this point
-        const allNewCandyActions = recording.actions.filter(a => a.type === 'newCandy' && a.timestamp <= time);
-        const candyQueue = allNewCandyActions.map(a => a.candyType);
-        let candyQueueIndex = 0;
+        // The candy queue must contain ALL generated candies from the recording
+        // to correctly rebuild state from the beginning.
+        const candyQueue = recording.actions.filter(a => a.type === 'newCandy').map(a => a.candyType);
         
-        // Create a new board with proper candy generation
+        // Always create a new board for a clean slate when scrubbing.
         const replayBoard = new Board(
             this.config.boardSize,
             this.config.candyTypes,
             () => {}, // onMatch (muted for scrub)
             () => {
                 // Use the recorded candy types in order
-                if (candyQueueIndex < candyQueue.length) {
-                    return candyQueue[candyQueueIndex++];
-                }
-                // Fallback if we run out
-                return this.config.candyTypes[0];
+                const nextType = candyQueue.shift();
+                // Fallback if we run out (should not happen in a correct recording)
+                return nextType || this.config.candyTypes[0];
             },
-            () => false // Don't pause during rebuild
+            () => true // The board is effectively always paused during scrubbing
         );
         replayBoard.boardElement = replayBoardElement;
         this.state.currentReplayBoard = replayBoard;

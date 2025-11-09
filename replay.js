@@ -21,6 +21,9 @@ export default class Replay {
             actions: [],
             currentReplayBoard: null,
         };
+        
+        this.boundHandleScrubMove = this.handleScrubMove.bind(this);
+        this.boundHandleScrubEnd = this.handleScrubEnd.bind(this);
 
         this.setupUI();
     }
@@ -265,8 +268,8 @@ export default class Replay {
         this.wasPlaying = !this.state.isPaused;
         this.pause();
 
-        document.addEventListener('pointermove', this.handleScrubMove.bind(this));
-        document.addEventListener('pointerup', this.handleScrubEnd.bind(this), { once: true });
+        document.addEventListener('pointermove', this.boundHandleScrubMove);
+        document.addEventListener('pointerup', this.boundHandleScrubEnd, { once: true });
 
         this.updateScrub(e);
     }
@@ -277,7 +280,7 @@ export default class Replay {
     }
 
     handleScrubEnd(e) {
-        document.removeEventListener('pointermove', this.handleScrubMove.bind(this));
+        document.removeEventListener('pointermove', this.boundHandleScrubMove);
         this.isScrubbing = false;
 
         // The state is already rebuilt on move, so we just need to decide whether to resume.
@@ -302,12 +305,14 @@ export default class Replay {
         this.stopTimelineUpdater();
         
         const recording = recorder.getRecording();
-        if (!recording || !recording.initialState) return;
+        if (!recording || !recording.initialState || !this.state.currentReplayBoard) return;
 
         // Temporarily mute sounds during fast-forward
-        const originalPlaySound = this.state.currentReplayBoard.onMatch;
+        const originalOnMatch = this.state.currentReplayBoard.onMatch;
         this.state.currentReplayBoard.onMatch = () => {};
 
+        // Re-initialize the board state. This needs to clear existing DOM elements.
+        this.state.currentReplayBoard.boardElement.innerHTML = '';
         this.state.currentReplayBoard.initialize(recording.initialState);
 
         const pastActions = recording.actions.filter(a => a.timestamp < time);
@@ -342,7 +347,7 @@ export default class Replay {
         }
         
         // Restore sound function
-        this.state.currentReplayBoard.onMatch = originalPlaySound;
+        this.state.currentReplayBoard.onMatch = originalOnMatch;
 
         this.state.pauseTime = time;
         this.state.isPaused = true;
